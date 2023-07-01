@@ -70,6 +70,7 @@ import Excel from 'exceljs'
     return await page.evaluate(() => {
       const links = []
       document.querySelectorAll('.Nv2PK').forEach((negocio) => links.push(negocio.children[0].href))
+      if(links.length === 0) links.push(document.URL)
       return links
     })
   }
@@ -77,42 +78,44 @@ import Excel from 'exceljs'
   async function getData(query){
     for(let negocio of negocios){
       if(collected.includes(negocio)) continue
-      await page.goto(negocio, {timeout: waitTimeout}).catch(() => console.log('TimedOut'))
-      let data = await page.evaluate(() => {
-        const name = document.querySelector('.fontHeadlineLarge')?.textContent?.trim()
-        let web = document.querySelector('[aria-label*="Sitio web"]')?.textContent?.trim()
-        let phone = document.querySelector('[aria-label*="Teléfono"]')?.textContent?.trim()
-        if(web && web?.includes(' ')){web = undefined}
-        if(web && !web?.includes('https://')){web = `https://${web}`}
-        if(phone && phone.includes('Agregar')){phone = undefined}
-        return {name, web, phone}
-      })
-      data = {query, link : negocio, ...data}
-      if(data.web){
-        await page.goto(data.web, {timeout: waitTimeout}).catch(() => console.log('TimedOut'))
-        await page.waitForNavigation().catch(() => {})
-        const redes = await page.evaluate(() => {
-          let email = document.querySelector('[href*="mailto"]')?.href.replace('mailto:', '')
-          //if(!email || email === '') {email = document.querySelector('[href*="mailto"]')?.textContent}
-          const facebook = document.querySelector('[href*="facebook.com"]')?.href
-          const instagram = document.querySelector('[href*="instagram.com"]')?.href
-          const linkedin = document.querySelector('[href*="linkedin.com"]')?.href
-          return {email, facebook, instagram, linkedin}
+      try{
+        await page.goto(negocio, {timeout: waitTimeout})
+        let data = await page.evaluate(() => {
+          const name = document.querySelector('.fontHeadlineLarge')?.textContent?.trim()
+          let web = document.querySelector('[aria-label*="Sitio web"]')?.textContent?.trim()
+          let phone = document.querySelector('[aria-label*="Teléfono"]')?.textContent?.trim()
+          if(web && web?.includes(' ')){web = undefined}
+          if(web && !web?.includes('https://')){web = `https://${web}`}
+          if(phone && phone.includes('Agregar')){phone = undefined}
+          return {name, web, phone}
         })
-        data = {...data, ...redes}
-      }
-      if(!data.email && data.facebook){
-        await page.goto(data.facebook, {timeout: waitTimeout}).catch(() => console.log('TimedOut'))
-        await page.waitForNavigation().catch(() => {})
-        data.email = await page.evaluate(() => {
-          const email = Array.from(document.querySelectorAll('.xieb3on ul .xu06os2'))?.filter((e) => e.textContent.includes('@'))[0]?.textContent || document.querySelector('[href*="mailto"]')?.href.replace('mailto:', '')
-          return email
-        })
-      }
-      console.log(data)
-      console.log(++extraidos)
-      worksheet.addRow(data)
-      await output.xlsx.writeFile(outputFile)
+        data = {query, link : negocio, ...data}
+        if(data.web){
+          await page.goto(data.web, {timeout: waitTimeout})
+          await page.waitForNavigation().catch(() => {})
+          const redes = await page.evaluate(() => {
+            let email = document.querySelector('[href*="mailto"]')?.href.replace('mailto:', '')
+            //if(!email || email === '') {email = document.querySelector('[href*="mailto"]')?.textContent}
+            const facebook = document.querySelector('[href*="facebook.com"]')?.href
+            const instagram = document.querySelector('[href*="instagram.com"]')?.href
+            const linkedin = document.querySelector('[href*="linkedin.com"]')?.href
+            return {email, facebook, instagram, linkedin}
+          })
+          data = {...data, ...redes}
+        }
+        if(!data.email && data.facebook){
+          await page.goto(data.facebook, {timeout: waitTimeout})
+          await page.waitForNavigation().catch(() => {})
+          data.email = await page.evaluate(() => {
+            const email = Array.from(document.querySelectorAll('.xieb3on ul .xu06os2'))?.filter((e) => e.textContent.includes('@'))[0]?.textContent || document.querySelector('[href*="mailto"]')?.href.replace('mailto:', '')
+            return email
+          })
+        }
+        console.log(data)
+        console.log(++extraidos)
+        worksheet.addRow(data)
+        await output.xlsx.writeFile(outputFile)
+      }catch{console.log('TimedOut')}
     }
   }
 })();
