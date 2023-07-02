@@ -5,7 +5,7 @@ import Excel from 'exceljs'
 (async () => {
   const modoBusqueda = true
   const QUERY_NEGOCIOS = '.Nv2PK'
-  const waitTimeout = 350000
+  const waitTimeout = 60 * 3 * 1000
   const outputFile = 'Output.xlsx'
   const backupFile = 'Output-Backup.xlsx'
   const browser = await puppeteer.launch({headless: process.env.headless});
@@ -92,7 +92,7 @@ import Excel from 'exceljs'
         data = {query, link : negocio, ...data}
         if(data.web){
           await page.goto(data.web, {timeout: waitTimeout})
-          await page.waitForNavigation().catch(() => {})
+          await page.waitForNavigation().catch(() => page.goBack())
           const redes = await page.evaluate(() => {
             let email = document.querySelector('[href*="mailto"]')?.href.replace('mailto:', '')
             //if(!email || email === '') {email = document.querySelector('[href*="mailto"]')?.textContent}
@@ -105,7 +105,7 @@ import Excel from 'exceljs'
         }
         if(!data.email && data.facebook){
           await page.goto(data.facebook, {timeout: waitTimeout})
-          await page.waitForNavigation().catch(() => {})
+          await page.waitForNavigation().catch(() => page.goBack())
           data.email = await page.evaluate(() => {
             const email = Array.from(document.querySelectorAll('.xieb3on ul .xu06os2'))?.filter((e) => e.textContent.includes('@'))[0]?.textContent || document.querySelector('[href*="mailto"]')?.href.replace('mailto:', '')
             return email
@@ -116,7 +116,6 @@ import Excel from 'exceljs'
         worksheet.addRow(data)
         await output.xlsx.writeFile(outputFile)
       }catch{
-        page.goBack()
         console.log("TimeOut")
       }
     }
