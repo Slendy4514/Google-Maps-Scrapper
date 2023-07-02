@@ -2,3 +2,5 @@
 .env
 .xlsx
 *.xlsx
+/Agencias
+/Extracción

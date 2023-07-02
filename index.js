@@ -8,7 +8,7 @@ import Excel from 'exceljs'
   const waitTimeout = 350000
   const outputFile = 'Output.xlsx'
   const backupFile = 'Output-Backup.xlsx'
-  const browser = await puppeteer.launch({headless: false});
+  const browser = await puppeteer.launch({headless: process.env.headless});
   const page = (await browser.pages())[0];
 
   const output = new Excel.Workbook()
@@ -115,7 +115,10 @@ import Excel from 'exceljs'
         console.log(++extraidos)
         worksheet.addRow(data)
         await output.xlsx.writeFile(outputFile)
-      }catch{console.log('TimedOut')}
+      }catch{
+        page.goBack()
+        console.log("TimeOut")
+      }
     }
   }
 })();
